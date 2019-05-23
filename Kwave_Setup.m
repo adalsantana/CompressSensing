@@ -10,11 +10,19 @@ dy = 0.1e-3;    %grid point spacing in the y direction [m]
 dz = 0.1e-3;    %grid point spacing in the z direction [m]
 kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);
 
+% define a binary sensor mask 
+% sensor mask used to define where our pressure field will be recorded
+
+sensor_x_pos = Nx/2;        % grid points
+sensor_y_pos = Ny/2;        % grid points
+sensor_radius = Nx/2-22;    % grid points 
+sensor_arc_angle = 3*pi/2;  % radians
+
 % ------- define the properties of the homogeneous propagation medium ----
 medium.sound_speed = 1500;  % [m/s]                 
 medium.alpha_coeff = 0.75;  % [dB/(MHz^y cm)]
 medium.alpha_power = 1.5;   
-
+medium.density = 1000;      % [kg/m^3] density for water being used for now
 % -------- define medium properties for non homogenous medium
 %medium.sound_speed = 1500 * ones(Nx, Ny);   % [m/s]
 %medium.sound_speed(1:Nx/2, :) = 1800;       % [m/s]
@@ -53,6 +61,7 @@ transducer_width = transducer.number_elements * transducer.element_width + (tran
 %use this to position the transducer in the middle of the computational
 %grid
 transducer.position = round([1,Ny/2-transducer_width/2,Nz/2-transducer.element_length/2]);
+
 %properties used to derive beamforming delays
 transducer.sound_speed = 1540;              % sound speed [m/s]
 transducer.focus_distance = 20e-3;          %focus distance [m]
@@ -60,9 +69,6 @@ transducer.elevation_focus_distance = 19e-3;%focus distance in the elevation pla
 transducer.steering_angle = 0;              %steering angle 
 
 %apodization
-
-%append the input signal used to derive the transducer
-transducer.input_signal = input_signal; 
 transducer.transmit_apodization = 'Rectangular'; 
 transducer.receive_apodization = 'Rectangular'; 
 
@@ -70,5 +76,10 @@ transducer.receive_apodization = 'Rectangular';
 transducer.active_elements = zeros(transducer.number_elements, 1); 
 transducer.active_elements = 1;
 
+%append the input signal used to derive the transducer
+transducer.input_signal = input_signal; 
+
 %create the transducer using the defined settings 
 transducer = kWaveTransducer(kgrid, transducer);
+
+%[sensor_data] = kspaceFirstOrder3D(kgrid, medium, transducer, sensor, input_args(i); 
