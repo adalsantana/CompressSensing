@@ -1,33 +1,44 @@
 %k-wave main file for compress sensing integration with ultrasound
 
+%input_args = [1 2];
 
 % ----------- create the copmutational grid --------------------- 
-Nx = 500;        %number of grid points in the x direction
-Ny = 500;        %number of grid points in the y direction      
-Nz = 500;        %number of grid points in the z direction
+Nx = 64;        %number of grid points in the x direction
+Ny = 64;        %number of grid points in the y direction      
+Nz = 64;        %number of grid points in the z direction
 dx = 0.1e-3;    %grid point spacing in the x direction [m]
 dy = 0.1e-3;    %grid point spacing in the y direction [m]
 dz = 0.1e-3;    %grid point spacing in the z direction [m]
 kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);
 
-% define a binary sensor mask 
-% sensor mask used to define where our pressure field will be recorded
+% ----------- computational grid created -----------------------
 
-sensor_x_pos = Nx/2;        % grid points
-sensor_y_pos = Ny/2;        % grid points
-sensor_radius = Nx/2-22;    % grid points 
-sensor_arc_angle = 3*pi/2;  % radians
+%  ---- define a series of Cartesian points to collect data ---- 
+% sensor mask used to define where our pressure field will be recorded
+x = (-22:2:22) * dx; 
+y = 22*dy*ones(size(x));
+z = (-22:2:22) * dz; 
+sensor.mask = [x;y;z]; 
+% ------------ binary sensor mask defined ----------------------
 
 % ------- define the properties of the homogeneous propagation medium ----
 medium.sound_speed = 1500;  % [m/s]                 
 medium.alpha_coeff = 0.75;  % [dB/(MHz^y cm)]
 medium.alpha_power = 1.5;   
-medium.density = 1000;      % [kg/m^3] density for water being used for now
+medium.density = 1000;     % [kg/m^3] density for water being used for now
+
+%parameter for nonlinearity. Why it should be set is covered in the
+%ultrasound transducer kwave documentation but am still unsure what to do
+%with it
+%medium.BonA = 1;
+
 % -------- define medium properties for non homogenous medium
 %medium.sound_speed = 1500 * ones(Nx, Ny);   % [m/s]
 %medium.sound_speed(1:Nx/2, :) = 1800;       % [m/s]
 %medium.density = 1000 * ones(Nx, Ny);
 %medium.density(:, Ny/4:Ny) = 1200; 
+
+% ----------- properties of homogenous medium defined -------------
 
 
 % ---------- defining time array -------------------
@@ -45,6 +56,8 @@ input_signal = toneBurst(1/kgrid.dt, tone_burst_freq, tone_burst_cycles);
 % impedance (the source is assigned to the particle velocity)
 input_signal = input_signal(1:Nx); %Nx matches length of multiplication below
 input_signal = (source_strength ./(medium.sound_speed * medium.density)) .* input_signal; 
+
+% ---------- input signal defined and created -------------------------
 
 %------------ define physical properties of transducer -------------------
 transducer.number_elements = 1;      % total number of transducer elements
@@ -82,4 +95,5 @@ transducer.input_signal = input_signal;
 %create the transducer using the defined settings 
 transducer = kWaveTransducer(kgrid, transducer);
 
-%[sensor_data] = kspaceFirstOrder3D(kgrid, medium, transducer, sensor, input_args(i); 
+%run the simulation
+sensor_data = kspaceFirstOrder3D(kgrid, medium, transducer, sensor);
