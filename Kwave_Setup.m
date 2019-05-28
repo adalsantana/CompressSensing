@@ -9,6 +9,10 @@ Nz = 64;        %number of grid points in the z direction
 dx = 0.1e-3;    %grid point spacing in the x direction [m]
 dy = 0.1e-3;    %grid point spacing in the y direction [m]
 dz = 0.1e-3;    %grid point spacing in the z direction [m]
+cx = dx / 2;
+cy = dy / 2;
+cz = dz / 2;
+
 kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);
 
 % ----------- computational grid created -----------------------
@@ -22,12 +26,13 @@ sensor.mask = [x;y;z];
 % ------------ binary sensor mask defined ----------------------
 
 % ------- define the properties of the homogeneous propagation medium ----
+% ------- parameters should match our experimental setup -----------------
 medium.sound_speed = 1500;  % [m/s]                 
 medium.alpha_coeff = 0.75;  % [dB/(MHz^y cm)]
 medium.alpha_power = 1.5;   
 medium.density = 1000;     % [kg/m^3] density for water being used for now
 
-%parameter for nonlinearity. Why it should be set is covered in the
+%parameter for nonlinearity. Why should it be set is covered in the
 %ultrasound transducer kwave documentation but am still unsure what to do
 %with it
 %medium.BonA = 1;
@@ -37,9 +42,6 @@ medium.density = 1000;     % [kg/m^3] density for water being used for now
 %medium.sound_speed(1:Nx/2, :) = 1800;       % [m/s]
 %medium.density = 1000 * ones(Nx, Ny);
 %medium.density(:, Ny/4:Ny) = 1200; 
-
-% ----------- properties of homogenous medium defined -------------
-
 
 % ---------- defining time array -------------------
 kgrid.makeTime(medium.sound_speed);
@@ -52,7 +54,7 @@ tone_burst_cycles = 5;
 %---------- create the input signal using toneBurst ----------------
 input_signal = toneBurst(1/kgrid.dt, tone_burst_freq, tone_burst_cycles);
 
-% scal3 the source magnitude by the source strength divided by the 
+% scale the source magnitude by the source strength divided by the 
 % impedance (the source is assigned to the particle velocity)
 input_signal = input_signal(1:Nx); %Nx matches length of multiplication below
 input_signal = (source_strength ./(medium.sound_speed * medium.density)) .* input_signal; 
@@ -94,6 +96,9 @@ transducer.input_signal = input_signal;
 
 %create the transducer using the defined settings 
 transducer = kWaveTransducer(kgrid, transducer);
+
+%create ball to be simulated and imaged
+ball = makeBall(Nx, Ny, Nz ,);
 
 %run the simulation
 sensor_data = kspaceFirstOrder3D(kgrid, medium, transducer, sensor);
