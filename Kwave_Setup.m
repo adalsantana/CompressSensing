@@ -14,7 +14,7 @@ cy = dy / 2;
 cz = dz / 2;
 
 kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);
-
+number_scan_lines = 96; 
 % ----------- computational grid created -----------------------
 
 
@@ -102,7 +102,54 @@ transducer = kWaveTransducer(kgrid, transducer);
 %create ball to be simulated and imaged
 ball_radius = 5; %in grid points 
 ball = makeBall(Nx, Ny, Nz , cx, cy, cz, ball_radius);
+input_args={'PlotLayout', true, 'PlotPML', false, 'DataCast', 'gpuArray-single', 'CartInterp', 'nearest'};
+%scan_lines = [number_scan_lines];
+medium_position = 0; 
 
+for scan_line_index = 1:number_scan_lines
+    
+    %load current section of the medium 
+    medium.sound_speed = sound_speed_map(:, medium_position:medium_position+Ny-1, :);
+    medium.density = density_map(:,medium_position:pmedium_position+Ny-1, :);
+    
+    %run the simulation
+    sensor_data = kSpaceFirstOrder3D(kgrid, medium, transducer, transducer, input+args{:});
+    
+    %extract the scan line from the sensor data
+    scan_lines(scan_line_index, :) = transducer.scan_line(sensor_data);
+    
+    medium_position = medium_position + transducer.element_width; 
+    
+    t0 = length(input_signal)*kgrid.dt/2;
+    r = c0 * ((1:length(kgrid.t_array))*kgrid.dt/2-t0);
+    
+    %create time gain compensation function  based on attenuation value,
+    % transmit freqeuncy, and round trip distance
+    tgc_alpha = 0.4;
+    tgc = exp(2*tgc_alpha*tone_burse_freq*1e-6*r*100);
+    
+    %apply the time gain compensation to each of the scan lines
+    scan_lines = bsxfun(@times, tgc, scan_lines);
+    
+    %filter the scan lines using both the transmit frequency and the second
+    %harmonic
+    scan_lines_fund = gaussianFilter(scan_lines, 1/kgrid.dt, tone_burst_freq, 100, true);
+    scan_lines_harm = gaussianFilter(scan_lines, 1/kgrid.dt, 2*tone_burst_freq, 30, true);
+    
+    %envelope detection 
+    scan_lines_fund = envelopeDetection(scan_lines_fund);
+    scan_lines_harm = envelopeDetection(scan_lines_harm);
+
+    %normalized log compression
+    compression_ratio = 3;
+    scan_lines_fund = logCompression(scan_lines_fund, compress_ratio, true);
+    scan_lines_harm = logCompression(scan_lines_harm, compress_ratio, true);
+    
+    %upsample the image using linear interpolation 
+    scale_factor = 2; 
+    scan_lines_fund = interp2(1:kgrid.Nt, (1:number_scan_lines).', scan_lines_fund, 1:kgrid.Nt, (1:1/scale_factor:number_scan_lines).');
+    scan_lines_harm = interp2(1:kgrid.Nt, (1:number_scan_lines).', scan_lines_harm, 1:kgrid.Nt, (1:1/scale_factor:number_scan_lines).');
+end
 %run the simulation
-input_args={'PlotLayout', true, 'PlotPML', false, 'DataCast', 'single', 'CartInterp', 'nearest'};
-sensor_data = kspaceFirstOrder3D(kgrid, medium, transducer, sensor, input_args{:});
+% input_args={'PlotLayout', true, 'PlotPML', false, 'DataCast', 'gpuArray-single', 'CartInterp', 'nearest'};
+% sensor_data = kspaceFirstOrder3D(kgrid, medium, transducer, sensor, input_args{:});
