@@ -103,14 +103,14 @@ transducer = kWaveTransducer(kgrid, transducer);
 ball_radius = 5; %in grid points 
 ball = makeBall(Nx, Ny, Nz , cx, cy, cz, ball_radius);
 input_args={'PlotLayout', true, 'PlotPML', false, 'DataCast', 'gpuArray-single', 'CartInterp', 'nearest'};
-%scan_lines = [number_scan_lines];
+scan_lines = size(number_scan_lines);
 medium_position = 0; 
 
 for scan_line_index = 1:number_scan_lines
     
     %load current section of the medium 
-    medium.sound_speed = sound_speed_map(:, medium_position:medium_position+Ny-1, :);
-    medium.density = density_map(:,medium_position:pmedium_position+Ny-1, :);
+    medium.sound_speed = sound_speed_map(:, medium_position:medium_position + Ny - 1, :);
+    medium.density = density_map(:, medium_position:medium_position + Ny - 1, :);
     
     %run the simulation
     sensor_data = kSpaceFirstOrder3D(kgrid, medium, transducer, transducer, input+args{:});
@@ -150,6 +150,7 @@ for scan_line_index = 1:number_scan_lines
     scan_lines_fund = interp2(1:kgrid.Nt, (1:number_scan_lines).', scan_lines_fund, 1:kgrid.Nt, (1:1/scale_factor:number_scan_lines).');
     scan_lines_harm = interp2(1:kgrid.Nt, (1:number_scan_lines).', scan_lines_harm, 1:kgrid.Nt, (1:1/scale_factor:number_scan_lines).');
 end
+
 %run the simulation
 % input_args={'PlotLayout', true, 'PlotPML', false, 'DataCast', 'gpuArray-single', 'CartInterp', 'nearest'};
 % sensor_data = kspaceFirstOrder3D(kgrid, medium, transducer, sensor, input_args{:});
