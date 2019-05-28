@@ -17,12 +17,14 @@ kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);
 
 % ----------- computational grid created -----------------------
 
+
 %  ---- define a series of Cartesian points to collect data ---- 
 % sensor mask used to define where our pressure field will be recorded
 x = (-22:2:22) * dx; 
 y = 22*dy*ones(size(x));
 z = (-22:2:22) * dz; 
 sensor.mask = [x;y;z]; 
+
 % ------------ binary sensor mask defined ----------------------
 
 % ------- define the properties of the homogeneous propagation medium ----
@@ -98,7 +100,9 @@ transducer.input_signal = input_signal;
 transducer = kWaveTransducer(kgrid, transducer);
 
 %create ball to be simulated and imaged
-ball = makeBall(Nx, Ny, Nz ,);
+ball_radius = 5; %in grid points 
+ball = makeBall(Nx, Ny, Nz , cx, cy, cz, ball_radius);
 
 %run the simulation
-sensor_data = kspaceFirstOrder3D(kgrid, medium, transducer, sensor);
+input_args={'PlotLayout', true, 'PlotPML', false, 'DataCast', 'single', 'CartInterp', 'nearest'};
+sensor_data = kspaceFirstOrder3D(kgrid, medium, transducer, sensor, input_args{:});
